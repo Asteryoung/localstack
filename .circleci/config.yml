@@ -137,31 +137,6 @@ jobs:
       - store_test_results:
           path: target/reports/
 
-  itest-lambda-provider:
-    executor: ubuntu-machine-amd64
-    working_directory: /tmp/workspace/repo
-    steps:
-      - attach_workspace:
-          at: /tmp/workspace
-      - run:
-          name: Test ASF Lambda provider
-          environment:
-            PROVIDER_OVERRIDE_LAMBDA: "asf"
-            TEST_PATH: "tests/integration/awslambda/test_lambda.py tests/integration/awslambda/test_lambda_api.py tests/integration/awslambda/test_lambda_common.py tests/integration/awslambda/test_lambda_integration_sqs.py tests/integration/cloudformation/resources/test_lambda.py tests/integration/awslambda/test_lambda_integration_dynamodbstreams.py tests/integration/awslambda/test_lambda_integration_kinesis.py tests/integration/awslambda/test_lambda_developer_tools.py"
-            PYTEST_ARGS: "--reruns 3 --junitxml=target/reports/lambda_asf.xml -o junit_suite_name='lambda_asf'"
-            COVERAGE_ARGS: "-p"
-          command: make test-coverage
-      - run:
-          name: Store coverage results
-          command: mv .coverage.* target/coverage/
-      - persist_to_workspace:
-          root:
-            /tmp/workspace
-          paths:
-            - repo/target/coverage/
-      - store_test_results:
-          path: target/reports/
-
   itest-s3-asf-provider:
     executor: ubuntu-machine-amd64
     working_directory: /tmp/workspace/repo
@@ -435,9 +410,6 @@ workflows:
       - itest-lambda-docker:
           requires:
             - preflight
-      - itest-lambda-provider:
-          requires:
-            - preflight
       - itest-s3-asf-provider:
           requires:
             - preflight
@@ -486,7 +458,6 @@ workflows:
       - report:
           requires:
             - itest-lambda-docker
-            - itest-lambda-provider
             - itest-s3-asf-provider
             - docker-test-amd64
             - docker-test-arm64
@@ -499,7 +470,6 @@ workflows:
               only: master
           requires:
             - itest-lambda-docker
-            - itest-lambda-provider
             - itest-s3-asf-provider
             - docker-test-amd64
             - docker-test-arm64
