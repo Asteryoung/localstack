@@ -119,6 +119,7 @@ airspeed.MacroDefinition.RESERVED_NAMES = airspeed.MacroDefinition.RESERVED_NAME
 def calculate(fn, self, *args, **kwarg):
     result = fn(self, *args, **kwarg)
     result = "" if result is None else result
+    result = str(result).lower() if type(result) == bool else result
     return result
 
 

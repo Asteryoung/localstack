@@ -1,5 +1,6 @@
 import json
 import re
+import textwrap
 
 from localstack.services.apigateway.templates import ApiGatewayVtlTemplate
 from localstack.utils.aws.templating import render_velocity_template
@@ -233,3 +234,24 @@ class TestMessageTransformationApiGateway:
         variables = {"method": {"request": {"header": {"X-My-Header": "my-header-value"}}}}
         result = ApiGatewayVtlTemplate().render_vtl(template, variables).strip()
         assert result == "my-header-value"
+
+    def test_boolean_in_variable(self):
+        # Inspired by authorizer context from Lambda authorizer:
+        # https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-lambda-authorizer-output.html
+        template = textwrap.dedent(
+            """
+        {
+            "booleanKeyTrue": $booleanKeyTrue,
+            "booleanKeyFalse": $booleanKeyFalse
+        }
+        """
+        )
+        variables = {
+            "booleanKeyTrue": True,
+            "booleanKeyFalse": False,
+        }
+        result = ApiGatewayVtlTemplate().render_vtl(template, variables)
+        assert "true" in result, "valid JSON of boolean True is lowercase true"
+        assert "false" in result, "valid JSON of boolean False is lowercase false"
+        result_json = json.loads(result)
+        assert result_json == variables
