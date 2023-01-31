@@ -20,6 +20,7 @@ from localstack.services.apigateway.helpers import (
     make_error_response,
 )
 from localstack.services.apigateway.integration import (
+    AppSyncIntegration,
     LambdaIntegration,
     LambdaProxyIntegration,
     MockIntegration,
@@ -438,6 +439,12 @@ def invoke_rest_api_integration_backend(invocation_context: ApiInvocationContext
                 invocation_context.stage_variables = helpers.get_stage_variables(invocation_context)
 
                 integration_response = SnsIntegration().invoke(invocation_context)
+                return apply_request_response_templates(
+                    integration_response, response_templates, content_type=APPLICATION_JSON
+                )
+            elif uri.startswith("arn:aws:apigateway:") and ".appsync-api:" in uri:
+                # arn:aws:apigateway:us-east-1:appsync_domain.appsync-api:path/graphql
+                integration_response = AppSyncIntegration().invoke(invocation_context)
                 return apply_request_response_templates(
                     integration_response, response_templates, content_type=APPLICATION_JSON
                 )

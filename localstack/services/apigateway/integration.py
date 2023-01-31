@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Union
 from moto.apigatewayv2.exceptions import BadRequestException
 from requests import Response
 
-from localstack import config
+from localstack import config, constants
 from localstack.constants import APPLICATION_JSON, HEADER_CONTENT_TYPE
 from localstack.services.apigateway import helpers
 from localstack.services.apigateway.context import ApiInvocationContext
@@ -101,6 +101,44 @@ class SnsIntegration(BackendIntegration):
         )
 
 
+class AppSyncIntegration(BackendIntegration):
+    @classmethod
+    def get_graphql_endpoint(cls, api_id):
+        """
+        Get the GraphQL endpoint for the given API ID. Only works for graphql
+        endpoints using "domain" strategy.
+        https://docs.localstack.cloud/user-guide/aws/appsync/#graphql-endpoints
+        """
+        return (
+            f"http://{api_id}.appsync-api.{constants.LOCALHOST_HOSTNAME}:"
+            f"{config.EDGE_PORT_HTTP}/graphql"
+        )
+
+    def invoke(self, invocation_context: ApiInvocationContext) -> Response:
+        invocation_context.context = get_event_request_context(invocation_context)
+        try:
+            payload = self.request_templates.render(invocation_context)
+        except Exception as e:
+            LOG.warning("Failed to apply template for AppSync integration", e)
+            raise
+        uri = (
+            invocation_context.integration.get("uri")
+            or invocation_context.integration.get("integrationUri")
+            or ""
+        )
+        uri_parts = uri.split(":")
+
+        region_name = uri_parts[3]
+        headers = invocation_context.headers.update(
+            aws_stack.mock_aws_request_headers(service="appsync", region_name=region_name)
+        )
+        app_sync_domain = uri_parts[-2].replace(".appsync-api", "")
+
+        # describe the api
+        url = self.get_graphql_endpoint(app_sync_domain)
+        return make_http_request(url, method="POST", headers=headers, data=payload)
+
+
 def call_lambda(function_arn: str, event: bytes, asynchronous: bool) -> str:
     lambda_client = aws_stack.connect_to_service(
         "lambda", region_name=extract_region_from_arn(function_arn)
@@ -110,8 +148,7 @@ def call_lambda(function_arn: str, event: bytes, asynchronous: bool) -> str:
         Payload=event,
         InvocationType="Event" if asynchronous else "RequestResponse",
     )
-    payload = inv_result.get("Payload")
-    if payload:
+    if payload := inv_result.get("Payload"):
         payload = to_str(payload.read())
         return payload
     return ""

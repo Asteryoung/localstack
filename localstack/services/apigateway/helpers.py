@@ -141,6 +141,18 @@ class Resolver:
         return self._resolve_references(self.document)
 
 
+class RequestParametersResolver:
+    """
+    Integration request data mapping expressions
+    """
+
+    # Map method request data to integration request parameters
+    def map_request_parameters_to_integration_request(
+        self, path_params: Dict[str, str], query_params: Dict[str, str], headers: Dict[str, str]
+    ):
+        pass
+
+
 def resolve_references(data: dict, allow_recursive=True) -> dict:
     resolver = Resolver(data, allow_recursive=allow_recursive)
     return resolver.resolve_references()
