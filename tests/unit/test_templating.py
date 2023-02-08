@@ -1,3 +1,4 @@
+import ast
 import json
 import re
 import textwrap
@@ -140,7 +141,7 @@ class TestMessageTransformationBasic:
         #end
         #return('end')
         """
-        result = render_velocity_template(template, {"context": dict()})
+        result = render_velocity_template(template, {"context": {}})
         result = re.sub(r"\s+", " ", result).strip()
         assert result == "loop1 loop3 end"
 
@@ -238,20 +239,16 @@ class TestMessageTransformationApiGateway:
     def test_boolean_in_variable(self):
         # Inspired by authorizer context from Lambda authorizer:
         # https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-lambda-authorizer-output.html
-        template = textwrap.dedent(
-            """
-        {
-            "booleanKeyTrue": $booleanKeyTrue,
-            "booleanKeyFalse": $booleanKeyFalse
-        }
-        """
-        )
+        # The returned values are all stringified. Notice that you cannot set a JSON
+        # object or array as a valid value of any key in the context map.
+        template = '{"booleanKeyTrue": $booleanKeyTrue, "booleanKeyFalse": $booleanKeyFalse}'
         variables = {
-            "booleanKeyTrue": True,
-            "booleanKeyFalse": False,
+            "booleanKeyTrue": "true",
+            "booleanKeyFalse": "false",
         }
         result = ApiGatewayVtlTemplate().render_vtl(template, variables)
-        assert "true" in result, "valid JSON of boolean True is lowercase true"
-        assert "false" in result, "valid JSON of boolean False is lowercase false"
-        result_json = json.loads(result)
-        assert result_json == variables
+        assert "true" in result
+        assert "false" in result
+        assert result == '{"booleanKeyTrue": true, "booleanKeyFalse": false}'
+        # test is valid json
+        json.loads(result)
