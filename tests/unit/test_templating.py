@@ -1,7 +1,5 @@
-import ast
 import json
 import re
-import textwrap
 
 from localstack.services.apigateway.templates import ApiGatewayVtlTemplate
 from localstack.utils.aws.templating import render_velocity_template
